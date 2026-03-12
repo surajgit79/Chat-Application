@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import { axiosInst } from "../lib/axios";
 import toast from "react-hot-toast";
-import { updateProfile } from "../../../backend/src/controllers/auth.controller";
-import { data } from "react-router-dom";
 
 export const useAuthStore = create((set) => ({
     authUser: null,
@@ -57,11 +55,20 @@ export const useAuthStore = create((set) => ({
             set({authUser: null});
             toast.success("Logged out successfully");
         } catch (error) {
-            toast.error(UNSAFE_ErrorResponseImpl.response.data.message);   
+            toast.error(error.response?.data?.message || "Logout failed");   
         }
     },
 
-    updateProfile: async(data) =>{
-
+    updateProfile: async(data) => {
+        set({ isUpdatingProfile: true });
+        try {
+            const res = await axiosInst.put("/auth/update-profile", data);
+            set({ authUser: res.data });
+            toast.success("Profile updated successfully");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to update profile");
+        } finally {
+            set({ isUpdatingProfile: false });
+        }
     },
 }));

@@ -1,6 +1,7 @@
 import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import cloudinary from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
     const { fullname, email, password } = req.body;
@@ -35,7 +36,7 @@ export const signup = async (req, res) => {
                 _id: newUser.id,
                 fullname: newUser.fullname,
                 email: newUser.email,
-                prfile: newUser.profilePic,
+                profilePic: newUser.profilePic,
             });
         } else {
             res.status(400).json({ message: "Invalid user data" });
@@ -95,7 +96,11 @@ export const updateProfile = async (req, res) => {
         if (!profilePic)
             return res.status(400).json({ message: "Profile picture is required" });
 
-        const uploadResponse = await cloudinary.upoader.upload(profilePic);
+        const uploadResponse = await cloudinary.uploader.upload(profilePic, {
+            folder: "chat-app",
+            resource_type: "image"
+        });
+        
         const updatedUser = await User.findByIdAndUpdate(userId, { profilePic: uploadResponse.secure_url }, { new: true });
 
         res.status(200).json(updatedUser);
