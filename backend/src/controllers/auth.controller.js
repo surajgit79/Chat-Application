@@ -6,7 +6,6 @@ import cloudinary from "../lib/cloudinary.js";
 export const signup = async (req, res) => {
     const { fullname, email, password } = req.body;
     try {
-        console.log("Fullname: "+fullname+", Email: "+email+", Password: "+password);
         if (!fullname || !email || !password) {
             return res.status(400).json({ message: "All fields are required" });
         }
@@ -62,10 +61,7 @@ export const login = async (req, res) => {
         if (!isPassword)
             return res.status(400).json({ message: "Invalid credential: Password" });
 
-        console.log("CP2, isPassword: ", isPassword)
-
         generateToken(user._id, res);
-        console.log("CP3, token generated")
         res.status(200).json({
             _id: user._id,
             fullname: user.fullname,
@@ -100,7 +96,7 @@ export const updateProfile = async (req, res) => {
             folder: "chat-app",
             resource_type: "image"
         });
-        
+
         const updatedUser = await User.findByIdAndUpdate(userId, { profilePic: uploadResponse.secure_url }, { new: true });
 
         res.status(200).json(updatedUser);
