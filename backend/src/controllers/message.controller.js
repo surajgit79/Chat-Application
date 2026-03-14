@@ -8,7 +8,44 @@ export const getUsersForSidebar = async (req, res) => {
     try {
         const loggedInUserId = req.user._id;
         const users = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
-        res.status(200).json(users);
+
+        const lastMessages = await Message.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { senderId: loggedInUserId },
+                        { receiverId: loggedInUserId }
+                    ]
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $group: {
+                    _id: {
+                        $cond: {
+                            if: { $eq: ["$senderId", loggedInUserId] },
+                            then: "$receiverId",
+                            else: "$senderId"
+                        }
+                    },
+                    lastMessage: { $first: "$$ROOT" }
+                }
+            }
+        ]);
+
+        const usersWithLastMEssage = users.map(user => {
+            const lastMsg = lastMessages.find(m => m._id.toString() === user._id.toString());
+            return { ...user.toObject(), lastMessage: lastMsg?.lastMessage };
+        });
+
+        usersWithLastMEssage.sort((a, b) => {
+            if (!a.lastMessage) return 1;
+            if (!b.lastMessage) return -1;
+            return new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt);
+        });
+        res.status(200).json(usersWithLastMEssage);
     } catch (error) {
         console.log("Error in getUsersForSidebar controller: ", error);
         return res.status(500).json({ message: "Get Users For Sidebar Error" });

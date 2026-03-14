@@ -13,6 +13,18 @@ const Sidebar = () => {
         getUsers()
     }, [getUsers])
 
+    useEffect(() => {
+        const socket = useAuthStore.getState().socket;
+
+        socket?.on("userRegistered", (newUser) => {
+            getUsers();
+        });
+
+        return () => {
+            socket?.off("userRegistered");
+        }
+    }, [getUsers]);
+
     const filteredUsers = showOnlineOnly
         ? users.filter((user) => user._id !== authUser?._id)
         : users.filter((user) => user._id !== authUser?._id);

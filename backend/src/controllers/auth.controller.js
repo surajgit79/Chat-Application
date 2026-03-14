@@ -2,6 +2,7 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
+import { io } from "../lib/socket.js";
 
 export const signup = async (req, res) => {
     const { fullname, email, password } = req.body;
@@ -30,6 +31,8 @@ export const signup = async (req, res) => {
             //generate JWT token
             generateToken(newUser.id, res);
             await newUser.save();
+            
+            io.emit("userRegistered", newUser);
 
             res.status(201).json({
                 _id: newUser.id,
@@ -73,6 +76,35 @@ export const login = async (req, res) => {
         return res.status(500).json({ message: "Login Error" });
     }
 };
+
+export const googleAuth = async (req, res) => {
+    const { email, fullname, profilePic } = req.body;
+    try {
+        let user = await User.findOne({ email });
+        if (!user) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(Math.random().toString(36).slice(-8), salt);
+
+            user = new User({
+                fullname, email, password: hashedPassword, profilePic
+            });
+            await user.save();
+            
+            io.emit("userRegistered", user);
+        }
+
+        generateToken(user._id, res);
+        res.status(200).json({
+            _id: user._id,
+            fullname: user.fullname,
+            email: user.email,
+            profilePic: user.profilePic
+        });
+    } catch (error) {
+        console.log("Error in googlgeAuth:", error);
+        return res.status(500).json({ message: "Google Auth Error" });
+    }
+}
 
 export const logout = (req, res) => {
     try {
