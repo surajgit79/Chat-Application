@@ -4,6 +4,9 @@ import cloudinary from "../lib/cloudinary.js";
 import { io } from "../lib/socket.js";
 import { getReceiverSocketId } from "../lib/socket.js";
 
+const naiveSearch = (text, pattern) =>
+    text.toLowerCase().includes(pattern.toLowerCase());
+
 export const getUsersForSidebar = async (req, res) => {
     try {
         const loggedInUserId = req.user._id;
@@ -100,5 +103,30 @@ export const sendMessage = async (req, res) => {
     } catch (error) {
         console.log("Error in sendMessage controller: ", error);
         return res.status(500).json({ message: "Send Message Error" });
+    }
+};
+
+export const searchMessages = async (req, res) => {
+    try {
+        const { q } = req.query;
+        const myId = req.user._id;
+
+        if (!q) return res.status(400).json({ message: "Missing search query" });
+
+        const messages = await Message.find({
+            $or: [
+                { senderId: myId },
+                { receiverId: myId }
+            ]
+        }).sort({ createdAt: -1 });
+
+        const results = messages.filter((message) => {
+            return naiveSearch(message.message || "", q);
+        });
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.log("Error in searchMessages controller: ", error);
+        return res.status(500).json({ message: "Search Messages Error" });
     }
 };
