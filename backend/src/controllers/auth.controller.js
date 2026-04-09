@@ -126,15 +126,16 @@ export const updateProfile = async (req, res) => {
 
         const uploadResponse = await cloudinary.uploader.upload(profilePic, {
             folder: "chat-app",
-            resource_type: "image"
+            resource_type: "image",
+            timeout: 120000
         });
 
-        const updatedUser = await User.findByIdAndUpdate(userId, { profilePic: uploadResponse.secure_url }, { new: true });
+        const updatedUser = await User.findByIdAndUpdate(userId, { profilePic: uploadResponse.secure_url }, { new: true }).select("-password").select("-__v");
 
         res.status(200).json(updatedUser);
     } catch (error) {
-        console.log("Error in updateProfile controller: ", error);
-        return res.status(500).json({ message: "Update Profile Error" });
+        console.log("Error in updateProfile controller: ", error.message || error);
+        return res.status(500).json({ message: "Update Profile Error", error: error.message });
     }
 };
 

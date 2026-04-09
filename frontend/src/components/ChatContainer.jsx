@@ -1,15 +1,29 @@
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
-import { formatMessageTime } from "../lib/utils";
+import { formatMessageTime, mergeSort } from "../lib/utils";
+
+const naiveSearch = (text, pattern) =>
+    text.toLowerCase().includes(pattern.toLowerCase());
 
 const ChatContainer = () => {
     const { messages, getMessages, isMessagesLoading, selectedUser, subscribeToMessages, unsubscribeToMessages } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const filteredAndSortedMessages = useMemo(() => {
+        let result = messages;
+        if (searchQuery.trim()) {
+            result = messages.filter((msg) => 
+                naiveSearch(msg.message || "", searchQuery)
+            );
+        }
+        return mergeSort(result, "createdAt");
+    }, [messages, searchQuery]);
 
     useEffect(() => {
         getMessages(selectedUser._id);
@@ -34,8 +48,18 @@ const ChatContainer = () => {
         <div className="flex-1 flex flex-col overflow-auto">
             <ChatHeader />
 
+            <div className="px-4 py-2 border-b">
+                <input
+                    type="text"
+                    placeholder="Search messages..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="input input-sm input-bordered w-full"
+                />
+            </div>
+
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
+                {filteredAndSortedMessages.map((message) => (
                     <div
                         key={message._id}
                         className={`chat ${message.senderId != authUser._id ? "chat-start" : "chat-end"}`}
